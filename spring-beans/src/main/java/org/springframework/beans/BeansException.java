@@ -28,6 +28,11 @@ import org.springframework.lang.Nullable;
  *
  * @author Rod Johnson
  * @author Juergen Hoeller
+ * 
+ * BeansException是beans包及其子包中抛出的所有异常的抽象超类。
+ * 
+ * 注意这是一个运行时（未检查）异常。Beans异常通常是致命的；
+ * 没有理由让它们成为检查型异常。
  */
 @SuppressWarnings("serial")
 public abstract class BeansException extends NestedRuntimeException {
@@ -35,6 +40,8 @@ public abstract class BeansException extends NestedRuntimeException {
 	/**
 	 * Create a new BeansException with the specified message.
 	 * @param msg the detail message
+	 * 
+	 * 使用指定消息创建新的BeansException。
 	 */
 	public BeansException(String msg) {
 		super(msg);
@@ -45,6 +52,8 @@ public abstract class BeansException extends NestedRuntimeException {
 	 * and root cause.
 	 * @param msg the detail message
 	 * @param cause the root cause
+	 * 
+	 * 使用指定消息和根本原因创建新的BeansException。
 	 */
 	public BeansException(@Nullable String msg, @Nullable Throwable cause) {
 		super(msg, cause);

@@ -45,6 +45,20 @@ import java.beans.PropertyDescriptor;
  * @see org.springframework.beans.factory.BeanFactory
  * @see org.springframework.validation.BeanPropertyBindingResult
  * @see org.springframework.validation.DataBinder#initBeanPropertyAccess()
+ * 
+ * BeanWrapper是Spring低级JavaBeans基础架构的中心接口。
+ * 
+ * 通常不直接使用，而是通过BeanFactory或DataBinder隐式使用。
+ * 
+ * 提供操作来分析和操作标准JavaBeans：
+ * 获取和设置属性值（单独或批量）、获取属性描述符、
+ * 查询属性的可读性/可写性。
+ * 
+ * 此接口支持嵌套属性，允许无限深度地设置子属性的属性。
+ * 
+ * BeanWrapper的"extractOldValueForEditor"设置默认为"false"，
+ * 以避免getter方法调用引起的副作用。
+ * 将其设置为"true"可将当前属性值暴露给自定义编辑器。
  */
 public interface BeanWrapper extends ConfigurablePropertyAccessor {
 
@@ -52,22 +66,31 @@ public interface BeanWrapper extends ConfigurablePropertyAccessor {
 	 * Specify a limit for array and collection auto-growing.
 	 * <p>Default is unlimited on a plain BeanWrapper.
 	 * @since 4.1
+	 * 
+	 * 指定数组和集合自动增长的限制。
+	 * 在普通BeanWrapper上默认是无限制的。
 	 */
 	void setAutoGrowCollectionLimit(int autoGrowCollectionLimit);
 
 	/**
 	 * Return the limit for array and collection auto-growing.
 	 * @since 4.1
+	 * 
+	 * 返回数组和集合自动增长的限制。
 	 */
 	int getAutoGrowCollectionLimit();
 
 	/**
 	 * Return the bean instance wrapped by this object.
+	 * 
+	 * 返回由此对象包装的bean实例。
 	 */
 	Object getWrappedInstance();
 
 	/**
 	 * Return the type of the wrapped bean instance.
+	 * 
+	 * 返回包装的bean实例的类型。
 	 */
 	Class<?> getWrappedClass();
 
@@ -75,6 +98,9 @@ public interface BeanWrapper extends ConfigurablePropertyAccessor {
 	 * Obtain the PropertyDescriptors for the wrapped object
 	 * (as determined by standard JavaBeans introspection).
 	 * @return the PropertyDescriptors for the wrapped object
+	 * 
+	 * 获取包装对象的PropertyDescriptors（通过标准JavaBeans内省确定）。
+	 * 返回包装对象的PropertyDescriptors
 	 */
 	PropertyDescriptor[] getPropertyDescriptors();
 
@@ -85,6 +111,11 @@ public interface BeanWrapper extends ConfigurablePropertyAccessor {
 	 * (may be a nested path, but not an indexed/mapped property)
 	 * @return the property descriptor for the specified property
 	 * @throws InvalidPropertyException if there is no such property
+	 * 
+	 * 获取包装对象特定属性的属性描述符。
+	 * propertyName：要获取描述符的属性（可以是嵌套路径，但不是索引/映射属性）
+	 * 返回指定属性的属性描述符
+	 * 如果没有这样的属性则抛出InvalidPropertyException
 	 */
 	PropertyDescriptor getPropertyDescriptor(String propertyName) throws InvalidPropertyException;
 

@@ -42,6 +42,14 @@ import org.springframework.util.StringUtils;
  * @see ClassLoader#getResource(String)
  * @see Class#getResourceAsStream(String)
  * @see Class#getResource(String)
+ * 
+ * ClassPathResource是Resource接口的实现类，用于加载类路径资源。
+ * 它使用给定的ClassLoader或Class来加载资源。
+ * 
+ * 主要特点：
+ * 1. 如果类路径资源位于文件系统中，则支持解析为java.io.File，但不支持JAR中的资源
+ * 2. 始终支持解析为java.net.URL
+ * 3. 可以通过ClassLoader或Class加载资源
  */
 public class ClassPathResource extends AbstractFileResolvingResource {
 
@@ -67,6 +75,10 @@ public class ClassPathResource extends AbstractFileResolvingResource {
 	 * <p>The default class loader will be used for loading the resource.
 	 * @param path the absolute path within the class path
 	 * @see ClassUtils#getDefaultClassLoader()
+	 * 
+	 * 为ClassLoader使用创建一个新的ClassPathResource。
+	 * 前导斜杠将被移除，因为ClassLoader资源访问方法不接受它。
+	 * 将使用默认类加载器加载资源。
 	 */
 	public ClassPathResource(String path) {
 		this(path, (ClassLoader) null);
@@ -81,10 +93,15 @@ public class ClassPathResource extends AbstractFileResolvingResource {
 	 * @param path the absolute path within the class path
 	 * @param classLoader the class loader to load the resource with
 	 * @see ClassUtils#getDefaultClassLoader()
+	 * 
+	 * 为ClassLoader使用创建一个新的ClassPathResource。
+	 * 前导斜杠将被移除，因为ClassLoader资源访问方法不接受它。
+	 * 如果提供的ClassLoader为null，将使用默认类加载器加载资源。
 	 */
 	public ClassPathResource(String path, @Nullable ClassLoader classLoader) {
 		Assert.notNull(path, "Path must not be null");
 		String pathToUse = StringUtils.cleanPath(path);
+		// 移除前导斜杠，因为ClassLoader资源访问方法不接受它
 		if (pathToUse.startsWith("/")) {
 			pathToUse = pathToUse.substring(1);
 		}
@@ -107,6 +124,11 @@ public class ClassPathResource extends AbstractFileResolvingResource {
 	 * @param clazz the class to load resources with
 	 * @see ClassUtils#getDefaultClassLoader()
 	 * @see ModuleResource
+	 * 
+	 * 为Class使用创建一个新的ClassPathResource。
+	 * 路径可以相对于给定的类，或者通过前导斜杠在类路径内绝对定位。
+	 * 如果提供的Class为null，将使用默认类加载器加载资源。
+	 * 这对于模块系统内的资源访问也很有用，可以从给定Class的包含模块加载资源。
 	 */
 	public ClassPathResource(String path, @Nullable Class<?> clazz) {
 		Assert.notNull(path, "Path must not be null");
@@ -114,9 +136,11 @@ public class ClassPathResource extends AbstractFileResolvingResource {
 
 		String absolutePath = this.path;
 		if (clazz != null && !absolutePath.startsWith("/")) {
+			// 如果clazz不为null且路径不以"/"开头，则拼接包路径
 			absolutePath = ClassUtils.classPackageAsResourcePath(clazz) + "/" + absolutePath;
 		}
 		else if (absolutePath.startsWith("/")) {
+			// 移除前导斜杠
 			absolutePath = absolutePath.substring(1);
 		}
 		this.absolutePath = absolutePath;
@@ -132,6 +156,9 @@ public class ClassPathResource extends AbstractFileResolvingResource {
 	 * the class path.
 	 * <p>The path returned by this method does not have a leading slash and is
 	 * suitable for use with {@link ClassLoader#getResource(String)}.
+	 * 
+	 * 返回此资源的绝对路径，作为类路径内清理后的资源路径。
+	 * 此方法返回的路径没有前导斜杠，适用于ClassLoader#getResource(String)。
 	 */
 	public final String getPath() {
 		return this.absolutePath;
@@ -139,6 +166,8 @@ public class ClassPathResource extends AbstractFileResolvingResource {
 
 	/**
 	 * Return the {@link ClassLoader} that this resource will be obtained from.
+	 * 
+	 * 返回此资源将从中获取的ClassLoader。
 	 */
 	@Nullable
 	public final ClassLoader getClassLoader() {
@@ -150,6 +179,8 @@ public class ClassPathResource extends AbstractFileResolvingResource {
 	 * This implementation checks for the resolution of a resource URL.
 	 * @see ClassLoader#getResource(String)
 	 * @see Class#getResource(String)
+	 * 
+	 * 此实现检查资源URL的解析。
 	 */
 	@Override
 	public boolean exists() {
@@ -161,6 +192,8 @@ public class ClassPathResource extends AbstractFileResolvingResource {
 	 * then proceeding with {@link AbstractFileResolvingResource}'s length check.
 	 * @see ClassLoader#getResource(String)
 	 * @see Class#getResource(String)
+	 * 
+	 * 此实现首先检查资源URL的解析，然后继续进行AbstractFileResolvingResource的长度检查。
 	 */
 	@Override
 	public boolean isReadable() {
@@ -171,17 +204,23 @@ public class ClassPathResource extends AbstractFileResolvingResource {
 	/**
 	 * Resolves a {@link URL} for the underlying class path resource.
 	 * @return the resolved URL, or {@code null} if not resolvable
+	 * 
+	 * 解析底层类路径资源的URL。
+	 * 返回解析后的URL，如果无法解析则返回null
 	 */
 	@Nullable
 	protected URL resolveURL() {
 		try {
 			if (this.clazz != null) {
+				// 通过Class加载资源
 				return this.clazz.getResource(this.path);
 			}
 			else if (this.classLoader != null) {
+				// 通过ClassLoader加载资源
 				return this.classLoader.getResource(this.absolutePath);
 			}
 			else {
+				// 通过系统ClassLoader加载资源
 				return ClassLoader.getSystemResource(this.absolutePath);
 			}
 		}

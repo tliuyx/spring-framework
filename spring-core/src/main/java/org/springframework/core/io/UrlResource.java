@@ -44,6 +44,9 @@ import org.springframework.util.StringUtils;
  * @author Sam Brannen
  * @since 28.12.2003
  * @see java.net.URL
+ * 
+ * UrlResource是Resource接口的实现类，用于处理java.net.URL定位器。
+ * 支持解析为URL，对于"file:"协议也支持解析为File。
  */
 public class UrlResource extends AbstractFileResolvingResource {
 
@@ -79,6 +82,8 @@ public class UrlResource extends AbstractFileResolvingResource {
 	 * @param url a URL
 	 * @see #UrlResource(URI)
 	 * @see #UrlResource(String)
+	 * 
+	 * 基于给定的URL对象创建一个新的UrlResource。
 	 */
 	public UrlResource(URL url) {
 		Assert.notNull(url, "URL must not be null");
@@ -91,6 +96,8 @@ public class UrlResource extends AbstractFileResolvingResource {
 	 * @param uri a URI
 	 * @throws MalformedURLException if the given URL path is not valid
 	 * @since 2.5
+	 * 
+	 * 基于给定的URI对象创建一个新的UrlResource。
 	 */
 	public UrlResource(URI uri) throws MalformedURLException {
 		Assert.notNull(uri, "URI must not be null");
@@ -104,6 +111,9 @@ public class UrlResource extends AbstractFileResolvingResource {
 	 * @param path a URI path
 	 * @throws MalformedURLException if the given URI path is not valid
 	 * @see ResourceUtils#toURI(String)
+	 * 
+	 * 基于URI路径创建一个新的UrlResource。
+	 * 注意：如果需要，给定的路径需要预先编码。
 	 */
 	public UrlResource(String path) throws MalformedURLException {
 		Assert.notNull(path, "Path must not be null");
@@ -113,6 +123,7 @@ public class UrlResource extends AbstractFileResolvingResource {
 
 		try {
 			// Prefer URI construction with toURL conversion (as of 6.1)
+			// 优先使用URI构造和toURL转换（自6.1版本起）
 			uri = ResourceUtils.toURI(cleanedPath);
 			url = uri.toURL();
 		}
@@ -135,6 +146,9 @@ public class UrlResource extends AbstractFileResolvingResource {
 	 * also known as "scheme-specific part"
 	 * @throws MalformedURLException if the given URL specification is not valid
 	 * @see java.net.URI#URI(String, String, String)
+	 * 
+	 * 基于URI规范创建一个新的UrlResource。
+	 * 给定的部分如果需要会自动编码。
 	 */
 	public UrlResource(String protocol, String location) throws MalformedURLException {
 		this(protocol, location, null);
@@ -151,6 +165,9 @@ public class UrlResource extends AbstractFileResolvingResource {
 	 * as following after a "#" separator)
 	 * @throws MalformedURLException if the given URL specification is not valid
 	 * @see java.net.URI#URI(String, String, String)
+	 * 
+	 * 基于URI规范创建一个新的UrlResource。
+	 * 给定的部分如果需要会自动编码。
 	 */
 	public UrlResource(String protocol, String location, @Nullable String fragment) throws MalformedURLException {
 		try {
@@ -241,6 +258,8 @@ public class UrlResource extends AbstractFileResolvingResource {
 	 * @see java.net.URL#openConnection()
 	 * @see java.net.URLConnection#setUseCaches(boolean)
 	 * @see java.net.URLConnection#getInputStream()
+	 * 
+	 * 此实现实现为给定URL打开一个InputStream。
 	 */
 	@Override
 	public InputStream getInputStream() throws IOException {
@@ -251,6 +270,7 @@ public class UrlResource extends AbstractFileResolvingResource {
 		}
 		catch (IOException ex) {
 			// Close the HTTP connection (if applicable).
+			// 关闭HTTP连接（如果适用）
 			if (con instanceof HttpURLConnection httpCon) {
 				httpCon.disconnect();
 			}

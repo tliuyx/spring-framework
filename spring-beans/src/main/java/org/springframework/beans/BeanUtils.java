@@ -69,6 +69,11 @@ import org.springframework.util.StringUtils;
  * @author Rob Harrop
  * @author Sam Brannen
  * @author Sebastien Deleuze
+ * 
+ * BeanUtils是JavaBeans的静态便利方法集合：用于实例化beans、
+ * 检查bean属性类型、复制bean属性等。
+ * 
+ * 主要供框架内部使用，但在一定程度上对应用程序类也很有用。
  */
 public abstract class BeanUtils {
 

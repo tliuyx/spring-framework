@@ -65,6 +65,17 @@ import org.springframework.util.xml.XmlValidationModeDetector;
  * talking to the latter's implementation of the
  * {@link org.springframework.beans.factory.support.BeanDefinitionRegistry} interface.
  *
+ * XML Bean定义读取器，负责将XML配置文件中的Bean定义加载到Spring容器中
+ * 将实际的XML文档读取工作委托给BeanDefinitionDocumentReader接口的实现
+ * 
+ * 加载流程：
+ * 1. 通过EncodedResource包装资源，支持编码处理
+ * 2. doLoadBeanDefinitions()执行实际加载，包括：
+ *    - doLoadDocument()加载XML文档
+ *    - registerBeanDefinitions()注册Bean定义
+ * 3. 使用DocumentLoader将InputSource转换为Document对象
+ * 4. 通过BeanDefinitionDocumentReader解析Document并注册BeanDefinition
+ *
  * @author Juergen Hoeller
  * @author Rob Harrop
  * @author Chris Beams
@@ -334,6 +345,7 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 
 		Set<EncodedResource> currentResources = this.resourcesCurrentlyBeingLoaded.get();
 
+		/* 检测循环导入，防止同一个资源被重复加载 */
 		if (!currentResources.add(encodedResource)) {
 			throw new BeanDefinitionStoreException(
 					"Detected cyclic loading of " + encodedResource + " - check your import definitions!");
@@ -341,9 +353,11 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 
 		try (InputStream inputStream = encodedResource.getResource().getInputStream()) {
 			InputSource inputSource = new InputSource(inputStream);
+			/* 设置编码，支持中文等非ASCII字符 */
 			if (encodedResource.getEncoding() != null) {
 				inputSource.setEncoding(encodedResource.getEncoding());
 			}
+			/* 调用核心方法执行实际的加载操作 */
 			return doLoadBeanDefinitions(inputSource, encodedResource.getResource());
 		}
 		catch (IOException ex) {
@@ -351,6 +365,7 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 					"IOException parsing XML document from " + encodedResource.getResource(), ex);
 		}
 		finally {
+			/* 清理资源，从当前加载集合中移除 */
 			currentResources.remove(encodedResource);
 			if (currentResources.isEmpty()) {
 				this.resourcesCurrentlyBeingLoaded.remove();
@@ -396,7 +411,9 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 			throws BeanDefinitionStoreException {
 
 		try {
+			/* 第一步：将XML文件加载为DOM Document对象 */
 			Document doc = doLoadDocument(inputSource, resource);
+			/* 第二步：解析Document并注册Bean定义 */
 			int count = registerBeanDefinitions(doc, resource);
 			if (logger.isDebugEnabled()) {
 				logger.debug("Loaded " + count + " bean definitions from " + resource);
@@ -438,6 +455,8 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 	 * @see DocumentLoader#loadDocument
 	 */
 	protected Document doLoadDocument(InputSource inputSource, Resource resource) throws Exception {
+		/* 使用DocumentLoader将XML文件加载为DOM Document对象 */
+		/* 参数包括：输入源、实体解析器、错误处理器、验证模式和命名空间感知标志 */
 		return this.documentLoader.loadDocument(inputSource, getEntityResolver(), this.errorHandler,
 				getValidationModeForResource(resource), isNamespaceAware());
 	}
@@ -515,9 +534,13 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 	 * @see BeanDefinitionDocumentReader#registerBeanDefinitions
 	 */
 	public int registerBeanDefinitions(Document doc, Resource resource) throws BeanDefinitionStoreException {
+		/* 创建BeanDefinitionDocumentReader实例，负责解析DOM文档 */
 		BeanDefinitionDocumentReader documentReader = createBeanDefinitionDocumentReader();
+		/* 记录注册前的Bean定义数量，用于计算本次注册的数量 */
 		int countBefore = getRegistry().getBeanDefinitionCount();
+		/* 委托给documentReader执行实际的注册操作 */
 		documentReader.registerBeanDefinitions(doc, createReaderContext(resource));
+		/* 返回本次注册的Bean定义数量 */
 		return getRegistry().getBeanDefinitionCount() - countBefore;
 	}
 

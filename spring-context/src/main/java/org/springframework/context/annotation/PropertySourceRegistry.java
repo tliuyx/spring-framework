@@ -55,6 +55,7 @@ class PropertySourceRegistry {
 	 * @throws IOException if loading a property source failed
 	 */
 	void processPropertySource(AnnotationAttributes propertySource) throws IOException {
+		// 解析@PropertySource注解的各个属性
 		String name = propertySource.getString("name");
 		if (!StringUtils.hasLength(name)) {
 			name = null;
@@ -67,12 +68,19 @@ class PropertySourceRegistry {
 		Assert.isTrue(locations.length > 0, "At least one @PropertySource(value) location is required");
 		boolean ignoreResourceNotFound = propertySource.getBoolean("ignoreResourceNotFound");
 
+		// 获取自定义PropertySourceFactory类，如果没有指定则使用默认的
 		Class<? extends PropertySourceFactory> factoryClass = propertySource.getClass("factory");
 		Class<? extends PropertySourceFactory> factoryClassToUse =
 				(factoryClass != PropertySourceFactory.class ? factoryClass : null);
+		
+		// 创建PropertySourceDescriptor，封装所有@PropertySource注解的属性
 		PropertySourceDescriptor descriptor = new PropertySourceDescriptor(Arrays.asList(locations),
 				ignoreResourceNotFound, name, factoryClassToUse, encoding);
+		
+		// 委托给PropertySourceProcessor处理实际的属性文件加载
 		this.propertySourceProcessor.processPropertySource(descriptor);
+		
+		// 保存描述符，用于AOT处理
 		this.descriptors.add(descriptor);
 	}
 

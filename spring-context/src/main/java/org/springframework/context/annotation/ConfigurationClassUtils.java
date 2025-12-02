@@ -145,10 +145,14 @@ public abstract class ConfigurationClassUtils {
 
 		Map<String, Object> config = metadata.getAnnotationAttributes(Configuration.class.getName());
 		if (config != null && !Boolean.FALSE.equals(config.get("proxyBeanMethods"))) {
+			// 标记为完整的配置类（full模式），表示该类是@Configuration注解的类
+			// 并且proxyBeanMethods属性为true（默认值），会使用CGLIB代理增强
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_FULL);
 		}
 		else if (config != null || Boolean.TRUE.equals(beanDef.getAttribute(CANDIDATE_ATTRIBUTE)) ||
 				isConfigurationCandidate(metadata)) {
+			// 标记为轻量级配置类（lite模式），表示该类是@Component、@ComponentScan、@Import、@ImportResource等注解的类
+			// 或者包含@Bean方法，不会使用CGLIB代理增强
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_LITE);
 		}
 		else {

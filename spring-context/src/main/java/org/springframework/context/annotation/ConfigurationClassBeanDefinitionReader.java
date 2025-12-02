@@ -128,6 +128,7 @@ class ConfigurationClassBeanDefinitionReader {
 	private void loadBeanDefinitionsForConfigurationClass(
 			ConfigurationClass configClass, TrackedConditionEvaluator trackedConditionEvaluator) {
 
+		// 第一步：检查是否应该跳过此配置类
 		if (trackedConditionEvaluator.shouldSkip(configClass)) {
 			String beanName = configClass.getBeanName();
 			if (StringUtils.hasLength(beanName) && this.registry.containsBeanDefinition(beanName)) {
@@ -137,14 +138,20 @@ class ConfigurationClassBeanDefinitionReader {
 			return;
 		}
 
+		// 第二步：如果是导入的配置类，注册配置类本身
 		if (configClass.isImported()) {
 			registerBeanDefinitionForImportedConfigurationClass(configClass);
 		}
+
+		// 第三步：注册所有@Bean方法定义的Bean
 		for (BeanMethod beanMethod : configClass.getBeanMethods()) {
 			loadBeanDefinitionsForBeanMethod(beanMethod);
 		}
 
+		// 第四步：处理导入的资源（XML配置文件）
 		loadBeanDefinitionsFromImportedResources(configClass.getImportedResources());
+
+		// 第五步：处理导入的BeanDefinitionRegistrar
 		loadBeanDefinitionsFromRegistrars(configClass.getImportBeanDefinitionRegistrars());
 	}
 

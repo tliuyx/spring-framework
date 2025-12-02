@@ -77,22 +77,30 @@ public class PropertySourceProcessor {
 	 * @throws IOException if loading the properties failed
 	 */
 	public void processPropertySource(PropertySourceDescriptor descriptor) throws IOException {
+		// 从描述符中获取@PropertySource注解的各个属性
 		String name = descriptor.name();
 		String encoding = descriptor.encoding();
 		List<String> locations = descriptor.locations();
 		Assert.isTrue(locations.size() > 0, "At least one @PropertySource(value) location is required");
 		boolean ignoreResourceNotFound = descriptor.ignoreResourceNotFound();
+		
+		// 获取PropertySourceFactory实例，如果没有指定则使用默认的DefaultPropertySourceFactory
 		PropertySourceFactory factory = (descriptor.propertySourceFactory() != null ?
 				instantiateClass(descriptor.propertySourceFactory()) : defaultPropertySourceFactory);
 
+		// 处理每个位置路径
 		for (String location : locations) {
 			try {
+				// 解析位置路径中的占位符（如${spring.config.location}）
 				String resolvedLocation = this.environment.resolveRequiredPlaceholders(location);
+				// 获取所有匹配的资源（支持通配符，如classpath*:*.properties）
 				for (Resource resource : this.resourcePatternResolver.getResources(resolvedLocation)) {
+					// 使用工厂创建PropertySource并添加到环境中
 					addPropertySource(factory.createPropertySource(name, new EncodedResource(resource, encoding)));
 				}
 			}
 			catch (RuntimeException | IOException ex) {
+				// 处理异常，根据ignoreResourceNotFound决定是否忽略
 				// Placeholders not resolvable or resource not found when trying to open it
 				if (ignoreResourceNotFound && (ex instanceof PlaceholderResolutionException || isIgnorableException(ex) ||
 						isIgnorableException(ex.getCause()))) {
@@ -111,16 +119,19 @@ public class PropertySourceProcessor {
 		String name = propertySource.getName();
 		MutablePropertySources propertySources = this.environment.getPropertySources();
 
+		// 检查是否已经添加过同名的PropertySource
 		if (this.propertySourceNames.contains(name)) {
 			// We've already added a version, we need to extend it
 			PropertySource<?> existing = propertySources.get(name);
 			if (existing != null) {
 				PropertySource<?> newSource = (propertySource instanceof ResourcePropertySource rps ?
 						rps.withResourceName() : propertySource);
+				// 如果已存在的是CompositePropertySource，直接添加新的PropertySource
 				if (existing instanceof CompositePropertySource cps) {
 					cps.addFirstPropertySource(newSource);
 				}
 				else {
+					// 否则创建一个新的CompositePropertySource来包装现有的和新的PropertySource
 					if (existing instanceof ResourcePropertySource rps) {
 						existing = rps.withResourceName();
 					}
@@ -133,13 +144,16 @@ public class PropertySourceProcessor {
 			}
 		}
 
+		// 如果是第一个PropertySource，添加到最后
 		if (this.propertySourceNames.isEmpty()) {
 			propertySources.addLast(propertySource);
 		}
 		else {
+			// 否则添加到最后一个添加的PropertySource之前，保持@PropertySource注解的顺序
 			String lastAdded = this.propertySourceNames.get(this.propertySourceNames.size() - 1);
 			propertySources.addBefore(lastAdded, propertySource);
 		}
+		// 记录已添加的PropertySource名称
 		this.propertySourceNames.add(name);
 	}
 

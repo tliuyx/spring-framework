@@ -309,10 +309,13 @@ class ConfigurationClassParser {
 		}
 
 		// Process any @PropertySource annotations
+		// 处理@PropertySource注解，用于加载外部属性文件到Spring环境中
 		for (AnnotationAttributes propertySource : AnnotationConfigUtils.attributesForRepeatable(
 				sourceClass.getMetadata(), org.springframework.context.annotation.PropertySource.class,
 				PropertySources.class, true)) {
 			if (this.propertySourceRegistry != null) {
+				// 委托给PropertySourceRegistry处理，它会创建PropertySourceDescriptor
+				// 并进一步委托给PropertySourceProcessor加载实际的属性文件
 				this.propertySourceRegistry.processPropertySource(propertySource);
 			}
 			else {
@@ -367,6 +370,8 @@ class ConfigurationClassParser {
 			String[] resources = importResource.getStringArray("locations");
 			Class<? extends BeanDefinitionReader> readerClass = importResource.getClass("reader");
 			for (String resource : resources) {
+				// 解析资源路径中的占位符（如${spring.config.location}）
+				// 并将解析后的资源路径和对应的BeanDefinitionReader类添加到配置类中
 				String resolvedResource = this.environment.resolveRequiredPlaceholders(resource);
 				configClass.addImportedResource(resolvedResource, readerClass);
 			}

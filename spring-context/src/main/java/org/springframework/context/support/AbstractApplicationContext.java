@@ -585,48 +585,64 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 	@Override
 	public void refresh() throws BeansException, IllegalStateException {
+		// 获取锁，确保refresh过程的线程安全
 		this.startupShutdownLock.lock();
 		try {
+			// 记录当前执行refresh的线程
 			this.startupShutdownThread = Thread.currentThread();
 
+			// 启动监控步骤，用于性能分析
 			StartupStep contextRefresh = this.applicationStartup.start("spring.context.refresh");
 
 			// Prepare this context for refreshing.
+			// 第一步：准备刷新上下文，设置启动时间和活动状态
 			prepareRefresh();
 
 			// Tell the subclass to refresh the internal bean factory.
+			// 第二步：创建或刷新BeanFactory
 			ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
 
 			// Prepare the bean factory for use in this context.
+			// 第三步：配置BeanFactory的标准特性
 			prepareBeanFactory(beanFactory);
 
 			try {
 				// Allows post-processing of the bean factory in context subclasses.
+				// 第四步：允许子类进行后处理
 				postProcessBeanFactory(beanFactory);
 
+				// 启动Bean后处理监控步骤
 				StartupStep beanPostProcess = this.applicationStartup.start("spring.context.beans.post-process");
 				// Invoke factory processors registered as beans in the context.
+				// 第五步：调用BeanFactory后处理器
 				invokeBeanFactoryPostProcessors(beanFactory);
 				// Register bean processors that intercept bean creation.
+				// 第六步：注册Bean后处理器
 				registerBeanPostProcessors(beanFactory);
 				beanPostProcess.end();
 
 				// Initialize message source for this context.
+				// 第七步：初始化消息源
 				initMessageSource();
 
 				// Initialize event multicaster for this context.
+				// 第八步：初始化事件广播器
 				initApplicationEventMulticaster();
 
 				// Initialize other special beans in specific context subclasses.
+				// 第九步：执行特定于子类的刷新逻辑
 				onRefresh();
 
 				// Check for listener beans and register them.
+				// 第十步：注册事件监听器
 				registerListeners();
 
 				// Instantiate all remaining (non-lazy-init) singletons.
+				// 第十一步：实例化所有非懒加载的单例Bean
 				finishBeanFactoryInitialization(beanFactory);
 
 				// Last step: publish corresponding event.
+				// 第十二步：完成刷新
 				finishRefresh();
 			}
 
@@ -647,10 +663,12 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 			}
 
 			finally {
+				// 结束监控步骤
 				contextRefresh.end();
 			}
 		}
 		finally {
+			// 清空执行线程引用并释放锁
 			this.startupShutdownThread = null;
 			this.startupShutdownLock.unlock();
 		}
@@ -659,9 +677,12 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	/**
 	 * Prepare this context for refreshing, setting its startup date and
 	 * active flag as well as performing any initialization of property sources.
+	 * 
+	 * 准备此上下文以进行刷新，设置其启动日期和活动标志，并执行任何属性源的初始化。
+	 * 这是refresh()方法的第一步。
 	 */
 	protected void prepareRefresh() {
-		// Switch to active.
+		// 切换到活动状态，设置启动时间和状态标志
 		this.startupDate = System.currentTimeMillis();
 		this.closed.set(false);
 		this.active.set(true);
@@ -711,9 +732,14 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * @return the fresh BeanFactory instance
 	 * @see #refreshBeanFactory()
 	 * @see #getBeanFactory()
+	 * 
+	 * 告诉子类刷新内部Bean工厂。
+	 * 这是refresh()方法的第二步，负责获取新的BeanFactory实例。
 	 */
 	protected ConfigurableListableBeanFactory obtainFreshBeanFactory() {
+		// 刷新Bean工厂，由具体子类实现
 		refreshBeanFactory();
+		// 返回新创建的Bean工厂
 		return getBeanFactory();
 	}
 
@@ -721,15 +747,21 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * Configure the factory's standard context characteristics,
 	 * such as the context's ClassLoader and post-processors.
 	 * @param beanFactory the BeanFactory to configure
+	 * 
+	 * 配置工厂的标准上下文特征，如上下文的ClassLoader和后处理器。
+	 * 这是refresh()方法的第三步，配置BeanFactory的标准上下文特性。
 	 */
 	protected void prepareBeanFactory(ConfigurableListableBeanFactory beanFactory) {
 		// Tell the internal bean factory to use the context's class loader etc.
 		beanFactory.setBeanClassLoader(getClassLoader());
+		// 设置Bean表达式解析器
 		beanFactory.setBeanExpressionResolver(new StandardBeanExpressionResolver(beanFactory.getBeanClassLoader()));
+		// 添加属性编辑器注册器
 		beanFactory.addPropertyEditorRegistrar(new ResourceEditorRegistrar(this, getEnvironment()));
 
 		// Configure the bean factory with context callbacks.
 		beanFactory.addBeanPostProcessor(new ApplicationContextAwareProcessor(this));
+		// 忽略特定的依赖接口，这些接口将通过特殊方式注入
 		beanFactory.ignoreDependencyInterface(EnvironmentAware.class);
 		beanFactory.ignoreDependencyInterface(EmbeddedValueResolverAware.class);
 		beanFactory.ignoreDependencyInterface(ResourceLoaderAware.class);
@@ -778,16 +810,38 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * <p>This template method allows for registering special BeanPostProcessors
 	 * etc in certain AbstractApplicationContext subclasses.
 	 * @param beanFactory the bean factory used by the application context
+	 * 
+	 * 在标准初始化之后修改应用程序上下文的内部Bean工厂。
+	 * 此时初始定义资源已加载，但尚未运行后处理器，
+	 * 也未注册派生的Bean定义，最重要的是尚未实例化任何Bean。
+	 * 这个模板方法允许在某些AbstractApplicationContext子类中注册特殊的BeanPostProcessors等。
+	 * 这是refresh()方法的第四步。
 	 */
 	protected void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
+		// 模板方法，由子类实现
 	}
 
 	/**
 	 * Instantiate and invoke all registered BeanFactoryPostProcessor beans,
 	 * respecting explicit order if given.
 	 * <p>Must be called before singleton instantiation.
+	 * <p>BeanFactoryPostProcessor instances can be registered manually via the
+	 * ApplicationContext's {@link #addBeanFactoryPostProcessor} method or
+	 * automatically detected (and registered) by the ApplicationContext.
+	 * <p>Special handling is performed for BeanDefinitionRegistryPostProcessor,
+	 * which allows for dynamic registration of additional bean definitions
+	 * before the regular BeanFactoryPostProcessor instances are invoked.
+	 * @param beanFactory the BeanFactory to invoke the post-processors on
+	 * 
+	 * 实例化并调用所有已注册的BeanFactoryPostProcessor Bean，并遵循给定的显式顺序。
+	 * 必须在单例实例化之前调用。
+	 * <p>BeanFactoryPostProcessor实例可以通过ApplicationContext的
+	 * {@link #addBeanFactoryPostProcessor}方法手动注册，或者由ApplicationContext自动检测（并注册）。
+	 * <p>对BeanDefinitionRegistryPostProcessor进行特殊处理，
+	 * 它允许在常规BeanFactoryPostProcessor实例被调用之前动态注册额外的Bean定义。
 	 */
 	protected void invokeBeanFactoryPostProcessors(ConfigurableListableBeanFactory beanFactory) {
+		// 调用所有已注册的BeanFactoryPostProcessor
 		PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(beanFactory, getBeanFactoryPostProcessors());
 
 		// Detect a LoadTimeWeaver and prepare for weaving, if found in the meantime
@@ -803,8 +857,13 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * Instantiate and register all BeanPostProcessor beans,
 	 * respecting explicit order if given.
 	 * <p>Must be called before any instantiation of application beans.
+	 * 
+	 * 实例化并注册所有BeanPostProcessor Bean，并遵循给定的显式顺序。
+	 * 必须在应用程序Bean的任何实例化之前调用。
+	 * 这是refresh()方法的第六步。
 	 */
 	protected void registerBeanPostProcessors(ConfigurableListableBeanFactory beanFactory) {
+		// 注册所有BeanPostProcessor
 		PostProcessorRegistrationDelegate.registerBeanPostProcessors(beanFactory, this);
 	}
 
@@ -845,10 +904,15 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * <p>Uses {@link SimpleApplicationEventMulticaster} if none defined in the context.
 	 * @see #APPLICATION_EVENT_MULTICASTER_BEAN_NAME
 	 * @see org.springframework.context.event.SimpleApplicationEventMulticaster
+	 * 
+	 * 初始化应用事件广播器。
+	 * 如果上下文中未定义，则使用SimpleApplicationEventMulticaster。
+	 * 这是refresh()方法的第八步。
 	 */
 	protected void initApplicationEventMulticaster() {
 		ConfigurableListableBeanFactory beanFactory = getBeanFactory();
 		if (beanFactory.containsLocalBean(APPLICATION_EVENT_MULTICASTER_BEAN_NAME)) {
+			// 如果存在名为APPLICATION_EVENT_MULTICASTER_BEAN_NAME的Bean，则使用它作为事件广播器
 			this.applicationEventMulticaster =
 					beanFactory.getBean(APPLICATION_EVENT_MULTICASTER_BEAN_NAME, ApplicationEventMulticaster.class);
 			if (logger.isTraceEnabled()) {
@@ -856,6 +920,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 			}
 		}
 		else {
+			// 使用SimpleApplicationEventMulticaster作为默认事件广播器
 			this.applicationEventMulticaster = new SimpleApplicationEventMulticaster(beanFactory);
 			beanFactory.registerSingleton(APPLICATION_EVENT_MULTICASTER_BEAN_NAME, this.applicationEventMulticaster);
 			if (logger.isTraceEnabled()) {
@@ -898,6 +963,10 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * <p>This implementation is empty.
 	 * @throws BeansException in case of errors
 	 * @see #refresh()
+	 * 
+	 * 模板方法，可以被重写以添加上下文特定的刷新工作。
+	 * 在特殊Bean初始化时调用，在单例实例化之前。
+	 * 这是refresh()方法的第九步。
 	 */
 	protected void onRefresh() throws BeansException {
 		// For subclasses: do nothing by default.
@@ -906,6 +975,10 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	/**
 	 * Add beans that implement ApplicationListener as listeners.
 	 * Doesn't affect other listeners, which can be added without being beans.
+	 * 
+	 * 添加实现ApplicationListener的Bean作为监听器。
+	 * 不影响其他监听器，这些监听器可以不作为Bean添加。
+	 * 这是refresh()方法的第十步。
 	 */
 	protected void registerListeners() {
 		// Register statically specified listeners first.
@@ -933,6 +1006,9 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	/**
 	 * Finish the initialization of this context's bean factory,
 	 * initializing all remaining singleton beans.
+	 * 
+	 * 完成此上下文Bean工厂的初始化，初始化所有剩余的单例Bean。
+	 * 这是refresh()方法的第十一步。
 	 */
 	@SuppressWarnings("unchecked")
 	protected void finishBeanFactoryInitialization(ConfigurableListableBeanFactory beanFactory) {
@@ -994,6 +1070,10 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * Finish the refresh of this context, invoking the LifecycleProcessor's
 	 * onRefresh() method and publishing the
 	 * {@link org.springframework.context.event.ContextRefreshedEvent}.
+	 * 
+	 * 完成此上下文的刷新，调用LifecycleProcessor的onRefresh()方法
+	 * 并发布ContextRefreshedEvent事件。
+	 * 这是refresh()方法的第十二步，也是最后一步。
 	 */
 	protected void finishRefresh() {
 		// Reset common introspection caches in Spring's core infrastructure.

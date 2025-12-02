@@ -290,6 +290,9 @@ public abstract class AbstractPropertyResolver implements ConfigurablePropertyRe
 	}
 
 	private String doResolvePlaceholders(String text, PropertyPlaceholderHelper helper) {
+		// 使用PropertyPlaceholderHelper替换文本中的占位符
+		// 实际替换逻辑委托给PropertyPlaceholderHelper.replacePlaceholders方法
+		// 其中this::getPropertyAsRawString作为属性值的解析函数
 		return helper.replacePlaceholders(text, this::getPropertyAsRawString);
 	}
 

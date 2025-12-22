@@ -134,6 +134,7 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 				synchronized (factory) {
 					Object object = this.factoryBeanObjectCache.get(beanName);
 					if (object == null) {
+						// 从FactoryBean获取对象实例
 						object = doGetObjectFromFactoryBean(factory, beanName);
 						// Only post-process and store if not put there already during getObject() call above
 						// (for example, because of circular reference processing triggered by custom getBean calls)

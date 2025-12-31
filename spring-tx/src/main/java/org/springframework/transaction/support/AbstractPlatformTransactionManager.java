@@ -373,6 +373,7 @@ public abstract class AbstractPlatformTransactionManager
 	public final TransactionStatus getTransaction(@Nullable TransactionDefinition definition)
 			throws TransactionException {
 
+		// 根据传播行为处理事务获取逻辑：优先判断是否存在当前事务，然后根据传播级别决定加入、挂起或创建新事务
 		// Use defaults if no transaction definition given.
 		TransactionDefinition def = (definition != null ? definition : TransactionDefinition.withDefaults());
 
@@ -410,6 +411,7 @@ public abstract class AbstractPlatformTransactionManager
 			}
 		}
 		else {
+			// SUPPORTS/NOT_SUPPORTED/NEVER：不创建真实事务，仅创建“空事务”用于同步
 			// Create "empty" transaction: no actual transaction, but potentially synchronization.
 			if (def.getIsolationLevel() != TransactionDefinition.ISOLATION_DEFAULT && logger.isWarnEnabled()) {
 				logger.warn("Custom isolation level specified but no actual transaction initiated; " +
@@ -427,12 +429,15 @@ public abstract class AbstractPlatformTransactionManager
 			TransactionDefinition definition, Object transaction, boolean debugEnabled)
 			throws TransactionException {
 
+		// 已存在事务时，根据不同传播行为决定挂起/嵌套/参与或直接抛出异常
 		if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_NEVER) {
+			// PROPAGATION_NEVER：禁止在事务中运行，如果当前已有事务则抛异常
 			throw new IllegalTransactionStateException(
 					"Existing transaction found for transaction marked with propagation 'never'");
 		}
 
 		if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_NOT_SUPPORTED) {
+			// NOT_SUPPORTED：挂起当前事务，后续以非事务方式执行
 			if (debugEnabled) {
 				logger.debug("Suspending current transaction");
 			}
@@ -443,6 +448,7 @@ public abstract class AbstractPlatformTransactionManager
 		}
 
 		if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_REQUIRES_NEW) {
+			// REQUIRES_NEW：挂起当前事务，开启一个全新的独立事务
 			if (debugEnabled) {
 				logger.debug("Suspending current transaction, creating new transaction with name [" +
 						definition.getName() + "]");
@@ -458,6 +464,7 @@ public abstract class AbstractPlatformTransactionManager
 		}
 
 		if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_NESTED) {
+			// NESTED：在当前事务内创建嵌套事务，一般通过保存点实现
 			if (!isNestedTransactionAllowed()) {
 				throw new NestedTransactionNotSupportedException(
 						"Transaction manager does not allow nested transactions by default - " +
@@ -493,6 +500,7 @@ public abstract class AbstractPlatformTransactionManager
 
 		// PROPAGATION_REQUIRED, PROPAGATION_SUPPORTS, PROPAGATION_MANDATORY:
 		// regular participation in existing transaction.
+		// 对于 REQUIRED/SUPPORTS/MANDATORY：直接加入当前事务，根据配置校验隔离级别和只读属性
 		if (debugEnabled) {
 			logger.debug("Participating in existing transaction");
 		}

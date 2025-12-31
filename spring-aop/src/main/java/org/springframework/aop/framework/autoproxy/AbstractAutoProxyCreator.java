@@ -315,6 +315,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	public Object postProcessAfterInitialization(@Nullable Object bean, String beanName) {
 		if (bean != null) {
 			Object cacheKey = getCacheKey(bean.getClass(), beanName);
+			// 如果不是通过 getEarlyBeanReference 提前暴露的 Bean，则在此阶段决定是否需要包装为代理
 			if (this.earlyBeanReferences.remove(cacheKey) != bean) {
 				return wrapIfNecessary(bean, beanName, cacheKey);
 			}
@@ -352,18 +353,22 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	 * @return a proxy wrapping the bean, or the raw bean instance as-is
 	 */
 	protected Object wrapIfNecessary(Object bean, String beanName, Object cacheKey) {
+		// 自定义 TargetSource 创建过代理的 Bean 直接返回，由 TargetSource 自行管理目标实例
 		if (StringUtils.hasLength(beanName) && this.targetSourcedBeans.contains(beanName)) {
 			return bean;
 		}
+		// 已经显式标记为不需要代理的 Bean，直接返回原始实例
 		if (Boolean.FALSE.equals(this.advisedBeans.get(cacheKey))) {
 			return bean;
 		}
+		// 基础设施类（Advice/Advisor 等）或应跳过的 Bean 不参与 AOP 代理，结果写入缓存
 		if (isInfrastructureClass(bean.getClass()) || shouldSkip(bean.getClass(), beanName)) {
 			this.advisedBeans.put(cacheKey, Boolean.FALSE);
 			return bean;
 		}
 
 		// Create proxy if we have advice.
+		// 根据匹配到的 Advisor 构建代理对象，如果没有匹配的 Advisor，则记为不需要代理
 		Object[] specificInterceptors = getAdvicesAndAdvisorsForBean(bean.getClass(), beanName, null);
 		if (specificInterceptors != DO_NOT_PROXY) {
 			this.advisedBeans.put(cacheKey, Boolean.TRUE);
@@ -462,6 +467,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	protected Object createProxy(Class<?> beanClass, @Nullable String beanName,
 			@Nullable Object[] specificInterceptors, TargetSource targetSource) {
 
+		// 创建 AOP 代理的统一入口：委托给 buildProxy，将所有配置封装到 ProxyFactory 中
 		return buildProxy(beanClass, beanName, specificInterceptors, targetSource, false);
 	}
 
@@ -474,15 +480,17 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	private Object buildProxy(Class<?> beanClass, @Nullable String beanName,
 			@Nullable Object[] specificInterceptors, TargetSource targetSource, boolean classOnly) {
 
+		// 将目标类信息暴露到 BeanFactory 中，后续可以根据该信息选择合适的代理策略
 		if (this.beanFactory instanceof ConfigurableListableBeanFactory clbf) {
 			AutoProxyUtils.exposeTargetClass(clbf, beanName, beanClass);
 		}
 
+		// 使用 ProxyFactory 承载 AOP 配置，并从当前 AbstractAutoProxyCreator 拷贝通用设置
 		ProxyFactory proxyFactory = new ProxyFactory();
 		proxyFactory.copyFrom(this);
 
 		if (proxyFactory.isProxyTargetClass()) {
-			// Explicit handling of JDK proxy targets and lambdas (for introduction advice scenarios)
+			// 显式要求基于类的代理时，需要对 JDK 代理类或 Lambda 做特殊处理，仅追加其接口
 			if (Proxy.isProxyClass(beanClass) || ClassUtils.isLambdaClass(beanClass)) {
 				// Must allow for introductions; can't just set interfaces to the proxy's interfaces only.
 				for (Class<?> ifc : beanClass.getInterfaces()) {
@@ -491,7 +499,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 			}
 		}
 		else {
-			// No proxyTargetClass flag enforced, let's apply our default checks...
+			// 未强制指定 proxyTargetClass 时，根据规则决定是使用 JDK 代理还是 CGLIB 代理
 			if (shouldProxyTargetClass(beanClass, beanName)) {
 				proxyFactory.setProxyTargetClass(true);
 			}
@@ -500,17 +508,19 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 			}
 		}
 
+		// 构建 Advisor 数组并设置到 ProxyFactory，同时配置 TargetSource 与自定义行为
 		Advisor[] advisors = buildAdvisors(beanName, specificInterceptors);
 		proxyFactory.addAdvisors(advisors);
 		proxyFactory.setTargetSource(targetSource);
 		customizeProxyFactory(proxyFactory);
 
+		// 冻结代理配置以及预过滤标记，可在运行期提升拦截器链构建效率
 		proxyFactory.setFrozen(this.freezeProxy);
 		if (advisorsPreFiltered()) {
 			proxyFactory.setPreFiltered(true);
 		}
 
-		// Use original ClassLoader if bean class not locally loaded in overriding class loader
+		// 使用合适的 ClassLoader 创建代理类/代理对象，避免代理类加载器与目标类加载器不一致
 		ClassLoader classLoader = getProxyClassLoader();
 		if (classLoader instanceof SmartClassLoader smartClassLoader && classLoader != beanClass.getClassLoader()) {
 			classLoader = smartClassLoader.getOriginalClassLoader();

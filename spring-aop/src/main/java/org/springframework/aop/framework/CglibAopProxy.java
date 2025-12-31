@@ -174,6 +174,7 @@ class CglibAopProxy implements AopProxy, Serializable {
 	}
 
 	private Object buildProxy(@Nullable ClassLoader classLoader, boolean classOnly) {
+		// 创建 CGLIB 代理的核心入口：根据目标类配置 Enhancer 并生成代理类/代理实例
 		if (logger.isTraceEnabled()) {
 			logger.trace("Creating CGLIB proxy: " + this.advised.getTargetSource());
 		}
@@ -191,9 +192,11 @@ class CglibAopProxy implements AopProxy, Serializable {
 				}
 			}
 
+			// 对目标类进行校验：检查 final 方法、跨 ClassLoader 的包可见方法等潜在无法代理的场景
 			// Validate the class, writing log messages as necessary.
 			validateClassIfNecessary(proxySuperClass, classLoader);
 
+			// 构造并配置 CGLIB Enhancer：设置 ClassLoader、父类、接口、命名策略和字节码生成策略
 			// Configure CGLIB Enhancer...
 			Enhancer enhancer = createEnhancer();
 			if (classLoader != null) {
@@ -217,12 +220,14 @@ class CglibAopProxy implements AopProxy, Serializable {
 			for (int x = 0; x < types.length; x++) {
 				types[x] = callbacks[x].getClass();
 			}
+			// 构建 Callback 数组，对应不同调用场景（AOP 调用、直达目标、equals/hashCode 等），并配置 Callback 过滤器
 			// fixedInterceptorMap only populated at this point, after getCallbacks call above
 			ProxyCallbackFilter filter = new ProxyCallbackFilter(
 					this.advised.getConfigurationOnlyCopy(), this.fixedInterceptorMap, this.fixedInterceptorOffset);
 			enhancer.setCallbackFilter(filter);
 			enhancer.setCallbackTypes(types);
 
+			// 最终生成代理类并创建代理实例，同时将 ProxyCallbackFilter 精简为仅包含 Advisor key 的缓存结构
 			// Generate the proxy class and create a proxy instance.
 			// ProxyCallbackFilter has method introspection capability with Advisor access.
 			try {

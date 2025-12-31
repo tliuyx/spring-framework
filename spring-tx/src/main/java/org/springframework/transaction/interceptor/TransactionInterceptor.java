@@ -110,6 +110,7 @@ public class TransactionInterceptor extends TransactionAspectSupport implements 
 	@Override
 	@Nullable
 	public Object invoke(MethodInvocation invocation) throws Throwable {
+		// 事务拦截入口：先解析目标类，再委托给 TransactionAspectSupport.invokeWithinTransaction 完成事务边界控制
 		// Work out the target class: may be {@code null}.
 		// The TransactionAttributeSource should be passed the target class
 		// as well as the method, which may be from an interface.

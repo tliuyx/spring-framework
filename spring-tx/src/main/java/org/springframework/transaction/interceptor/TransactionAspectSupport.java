@@ -342,6 +342,7 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 	protected Object invokeWithinTransaction(Method method, @Nullable Class<?> targetClass,
 			final InvocationCallback invocation) throws Throwable {
 
+		// 声明式事务的核心执行模板：解析事务属性、选择事务管理器、按命令式或响应式模型执行业务并完成提交/回滚
 		// If the transaction attribute is null, the method is non-transactional.
 		TransactionAttributeSource tas = getTransactionAttributeSource();
 		final TransactionAttribute txAttr = (tas != null ? tas.getTransactionAttribute(method, targetClass) : null);
@@ -370,6 +371,7 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 		final String joinpointIdentification = methodIdentification(method, targetClass, txAttr);
 
 		if (txAttr == null || !(ptm instanceof CallbackPreferringPlatformTransactionManager cpptm)) {
+			// 标准命令式事务处理：通过 PlatformTransactionManager.getTransaction/commit/rollback 完成事务边界
 			// Standard transaction demarcation with getTransaction and commit/rollback calls.
 			TransactionInfo txInfo = createTransactionIfNecessary(ptm, txAttr, joinpointIdentification);
 
@@ -377,14 +379,17 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 			try {
 				// This is an around advice: Invoke the next interceptor in the chain.
 				// This will normally result in a target object being invoked.
+				// 通过回调执行实际业务逻辑（invocation.proceedWithInvocation），可能再次触发 AOP/拦截器链
 				retVal = invocation.proceedWithInvocation();
 			}
 			catch (Throwable ex) {
 				// target invocation exception
+				// 发生异常时，根据 rollbackOn 规则决定回滚还是提交
 				completeTransactionAfterThrowing(txInfo, ex);
 				throw ex;
 			}
 			finally {
+				// 统一清理 ThreadLocal 中绑定的 TransactionInfo，保证事务栈的一致性
 				cleanupTransactionInfo(txInfo);
 			}
 
@@ -418,6 +423,7 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 		}
 
 		else {
+			// CallbackPreferringPlatformTransactionManager：通过回调模型执行业务，并在回调内部决定提交/回滚
 			Object result;
 			final ThrowableHolder throwableHolder = new ThrowableHolder();
 

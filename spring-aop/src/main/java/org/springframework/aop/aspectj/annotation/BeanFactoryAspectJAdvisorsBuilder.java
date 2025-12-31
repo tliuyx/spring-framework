@@ -87,33 +87,42 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 	 */
 	@SuppressWarnings("NullAway")
 	public List<Advisor> buildAspectJAdvisors() {
+		// 缓存中保存已解析过的切面 Bean 名称，避免在容器启动过程中重复全量扫描
 		List<String> aspectNames = this.aspectBeanNames;
 
 		if (aspectNames == null) {
+			// 第一次调用时进入同步块，完成全量扫描与缓存构建
 			synchronized (this) {
 				aspectNames = this.aspectBeanNames;
 				if (aspectNames == null) {
 					List<Advisor> advisors = new ArrayList<>();
 					aspectNames = new ArrayList<>();
+					// 步骤1：从 BeanFactory 中获取所有候选 Bean 名称
 					String[] beanNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(
 							this.beanFactory, Object.class, true, false);
 					for (String beanName : beanNames) {
+						// 步骤2：根据 isEligibleBean 过滤不参与 AOP 的 Bean
 						if (!isEligibleBean(beanName)) {
 							continue;
 						}
 						// We must be careful not to instantiate beans eagerly as in this case they
 						// would be cached by the Spring container but would not have been weaved.
+						// 步骤3：只获取类型信息而不实例化 Bean，避免过早创建单例
 						Class<?> beanType = this.beanFactory.getType(beanName, false);
 						if (beanType == null) {
 							continue;
 						}
+						// 步骤4：判断当前 Bean 是否为 @Aspect 切面类
 						if (this.advisorFactory.isAspect(beanType)) {
 							try {
 								AspectMetadata amd = new AspectMetadata(beanType, beanName);
 								if (amd.getAjType().getPerClause().getKind() == PerClauseKind.SINGLETON) {
+									// 步骤5：针对单例切面创建 BeanFactoryAspectInstanceFactory
 									MetadataAwareAspectInstanceFactory factory =
 											new BeanFactoryAspectInstanceFactory(this.beanFactory, beanName);
+									// 步骤6：从切面中提取所有 Advisor
 									List<Advisor> classAdvisors = this.advisorFactory.getAdvisors(factory);
+									// 步骤7：根据 Bean 作用域将 Advisor 或切面工厂缓存起来
 									if (this.beanFactory.isSingleton(beanName)) {
 										this.advisorsCache.put(beanName, classAdvisors);
 									}
@@ -124,6 +133,7 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 								}
 								else {
 									// Per target or per this.
+									// 步骤8：处理非单例切面（如 perthis/pertarget），仅缓存工厂
 									if (this.beanFactory.isSingleton(beanName)) {
 										throw new IllegalArgumentException("Bean with name '" + beanName +
 												"' is a singleton, but aspect instantiation model is not singleton");
@@ -133,6 +143,7 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 									this.aspectFactoryCache.put(beanName, factory);
 									advisors.addAll(this.advisorFactory.getAdvisors(factory));
 								}
+								// 记录当前切面 Bean 名称，后续可以直接从缓存中恢复 Advisor
 								aspectNames.add(beanName);
 							}
 							catch (IllegalArgumentException | IllegalStateException | AopConfigException ex) {
@@ -151,6 +162,7 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 		if (aspectNames.isEmpty()) {
 			return Collections.emptyList();
 		}
+		// 非首次调用：根据 aspectBeanNames 列表从缓存中恢复 Advisor，避免重复解析 @Aspect
 		List<Advisor> advisors = new ArrayList<>();
 		for (String aspectName : aspectNames) {
 			List<Advisor> cachedAdvisors = this.advisorsCache.get(aspectName);
